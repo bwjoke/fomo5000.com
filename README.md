@@ -1,5 +1,7 @@
 # FOMO5000
 
+[English](README.md) | [中文](README.zh-CN.md)
+
 FOMO5000 is a static market map for scanning 5,000+ U.S.-listed stocks at once.
 
 Live site: https://fomo5000.com
