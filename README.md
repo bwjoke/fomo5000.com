@@ -1,40 +1,40 @@
 # FOMO5000
 
-[English](README.md) | [中文](README.zh-CN.md)
+[中文](README.md) | [English](README.en.md)
 
-FOMO5000 is a static market map for scanning 5,000+ U.S.-listed stocks at once.
+FOMO5000 是一个静态美股市场地图，用来在同一张图上观察 5,000+ 只美股。
 
-Live site: https://fomo5000.com
+在线访问：https://fomo5000.com
 
-## What It Shows
+## 展示内容
 
-- X axis: estimated AI relevance, based on official sector/industry data plus a company-description semantic adjustment.
-- Y axis: recent market-cap change over 1W, 1M, 3M, 6M, or 12M.
-- Color: official Nasdaq sector.
-- Triangle angle: weekly price move at the selected timeline point.
-- Timeline: weekly snapshots from 2025-01-01 through the latest data date.
+- 横轴：AI 相关度估计，基于官方 sector/industry 信息，并用公司简介语义结果做小幅微调。
+- 纵轴：近 1W、1M、3M、6M、12M 的市值变化。
+- 颜色：官方 Nasdaq 行业板块。
+- 三角形角度：所选周度时间点的当周价格涨跌。
+- 时间轴：从 2025-01-01 到最新数据日期的周度快照。
 
-## Data Notes
+## 数据说明
 
-The checked-in market dataset is a generated snapshot from Nasdaq screener and historical quote endpoints. The current snapshot contains 5,292 usable symbols and is latest through 2026-05-26.
+仓库中的市场数据是由 Nasdaq screener 和历史报价接口生成的快照。当前快照包含 5,292 只可用股票，最新数据日期为 2026-05-26。
 
-Market-cap changes are estimates: current screener market cap is combined with historical close-price returns, holding share count constant. AI relevance is an experimental ranking signal, not a recommendation.
+市值变化是估算值：用当前 screener 市值结合历史收盘价收益率反推，并假设股本数量不变。AI 相关度是实验性排序信号，不代表投资建议。
 
-This project is for visualization and learning only. It is not financial advice. Market data remains subject to the terms of the original data providers.
+本项目仅用于可视化观察和学习，不构成任何金融或投资建议。市场数据仍受原始数据提供方条款约束。
 
-## Development
+## 本地开发
 
 ```sh
 npm ci
 npm run build
 ```
 
-The build step writes Cloudflare Pages-ready static assets to `dist/` and splits `data/market-data.json` into deployable chunks under `dist/data/`.
+构建脚本会把可部署到 Cloudflare Pages 的静态资源写入 `dist/`，并把 `data/market-data.json` 拆分为 `dist/data/` 下的数据分片。
 
-## Deployment
+## 部署
 
-Production deploys from `main` to Cloudflare Pages through GitHub Actions. Deployment credentials are stored only in GitHub environment secrets; no credentials are committed to this repository.
+生产环境从 `main` 分支通过 GitHub Actions 部署到 Cloudflare Pages。部署凭证只存放在 GitHub environment secrets 中，不提交到仓库。
 
 ## License
 
-Code is released under the MIT License. Market data is not covered by the code license and remains subject to the terms of the original data providers.
+代码使用 MIT License。市场数据不包含在代码 license 中，仍受原始数据提供方条款约束。
