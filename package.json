@@ -1,6 +1,11 @@
 {
+  "name": "fomo5000",
+  "private": true,
   "scripts": {
     "build": "node scripts/build-static.mjs",
     "deploy": "wrangler pages deploy dist --project-name=fomo5000 --branch=main"
+  },
+  "devDependencies": {
+    "wrangler": "4.95.0"
   }
 }
