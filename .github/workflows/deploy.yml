@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.repository == 'bwjoke/fomo5000.com'
+    if: github.repository == 'bwjoke/fomo5000.com' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: production
