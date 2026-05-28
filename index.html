@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Market Map</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace" aria-label="AI 美股二维地图">
+        <header class="topbar">
+          <div class="brand">
+            <span class="mark" aria-hidden="true"></span>
+            <div>
+              <h1>AI Market Map</h1>
+              <p>真实市场数据</p>
+            </div>
+          </div>
+
+          <div class="controls" aria-label="视图控制">
+            <div class="search-control">
+              <div class="search-box">
+                <label for="searchInput">搜索</label>
+                <input id="searchInput" type="search" autocomplete="off" placeholder="NVDA / 半导体 / 科技" />
+                <button id="clearSearch" class="search-clear" type="button" aria-label="清除搜索" title="清除搜索" hidden>X</button>
+              </div>
+              <button
+                id="presetSearch"
+                class="preset-button"
+                type="button"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-controls="presetSearchMenu"
+              >
+                常用
+              </button>
+              <div id="presetSearchMenu" class="preset-menu" hidden>
+                <button type="button" data-search-preset="NVDA">NVDA</button>
+                <button type="button" data-search-preset="WDC">WDC</button>
+                <button type="button" data-search-preset="SNDK">SNDK</button>
+                <button type="button" data-search-preset="MU">MU</button>
+                <button type="button" data-search-preset="芯片">芯片</button>
+                <button type="button" data-search-preset="软件">软件</button>
+                <button type="button" data-search-preset="通信">通信</button>
+              </div>
+            </div>
+
+            <div class="period-switch" role="group" aria-label="市值增幅周期">
+              <button data-period="1W" type="button">1W</button>
+              <button data-period="1M" type="button">1M</button>
+              <button data-period="3M" type="button">3M</button>
+              <button data-period="6M" type="button">6M</button>
+              <button class="active" data-period="12M" type="button">12M</button>
+            </div>
+
+            <div class="metric-switch" role="group" aria-label="纵轴单位">
+              <button data-metric="usd" type="button">$</button>
+              <button class="active" data-metric="pct" type="button">%</button>
+            </div>
+
+            <button id="resetView" class="icon-button" type="button" aria-label="重置视图" title="重置视图">
+              <span aria-hidden="true">⌖</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="plot-wrap">
+          <canvas id="marketCanvas" aria-label="AI 相关度与市值增幅散点图"></canvas>
+          <div id="tooltip" class="tooltip" hidden></div>
+          <div class="plot-caption">
+            <span id="countLabel">5,200 symbols</span>
+            <span>滚轮缩放，拖动画布平移</span>
+          </div>
+        </div>
+
+        <div class="timeline-row" aria-label="周度时间进度条">
+          <div class="timeline-datebox">
+            <span>周度时间</span>
+            <strong id="timelineDate">--</strong>
+          </div>
+          <div class="timeline-main">
+            <div class="index-strip" aria-label="纳斯达克指数曲线">
+              <canvas id="nasdaqCanvas"></canvas>
+              <span id="nasdaqIndexLabel">NASDAQ Composite</span>
+            </div>
+            <div class="timeline-slider-wrap">
+              <input id="timelineSlider" type="range" min="0" max="52" step="1" value="52" />
+            </div>
+            <div class="timeline-range">
+              <span id="timelineStart">--</span>
+              <span id="timelineEnd">--</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-panel" aria-label="股票详情与行业图例">
+        <section class="metric-panel">
+          <div class="metric-title">
+            <span>当前视图</span>
+            <strong id="periodLabel">12M</strong>
+          </div>
+          <div class="metric-grid">
+            <div>
+              <span>AI 相关度</span>
+              <strong>官方行业先验 + 简介微调</strong>
+            </div>
+            <div>
+              <span>三角方向</span>
+              <strong>当周涨跌</strong>
+            </div>
+            <div>
+              <span>三角面积</span>
+              <strong>当前市值</strong>
+            </div>
+            <div>
+              <span>纵轴尺度</span>
+              <strong id="axisModeLabel">市值涨跌幅 %</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="details-panel">
+          <h2>悬浮查看</h2>
+          <div id="stockDetails" class="stock-details empty">
+            <p>把鼠标移到任意三角形上，查看 ticker、公司名、行业权重、AI 分数、市值增幅和当周涨跌。</p>
+          </div>
+        </section>
+
+        <section class="legend-panel">
+          <h2>行业颜色</h2>
+          <div id="legend" class="legend"></div>
+        </section>
+      </aside>
+    </main>
+
+    <script src="./app.js?v=search-presets-20260528"></script>
+  </body>
+</html>

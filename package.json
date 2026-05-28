@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "build": "node scripts/build-static.mjs",
+    "deploy": "wrangler pages deploy dist --project-name=fomo5000 --branch=main"
+  }
+}
