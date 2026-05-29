@@ -378,6 +378,10 @@ function formatPct(value) {
   return `${sign}${value.toFixed(2)}%`;
 }
 
+function formatAxisPct(value) {
+  return Math.abs(value) < 0.005 ? "0%" : formatPct(value);
+}
+
 function formatReturnPct(value) {
   return Number.isFinite(value) ? formatPct(value * 100) : "N/A";
 }
@@ -657,7 +661,7 @@ function drawGrid(bounds) {
     ctx.stroke();
     ctx.fillStyle = ratio === 0 ? "rgba(255,207,90,0.9)" : "rgba(243,240,232,0.64)";
     const tickValue = inverseSymlog(sy);
-    ctx.fillText(currentMetric === "pct" ? formatPct(tickValue) : formatUsd(tickValue), 12, y);
+    ctx.fillText(currentMetric === "pct" ? formatAxisPct(tickValue) : formatUsd(tickValue), 12, y);
   });
 
   ctx.strokeStyle = "rgba(255,255,255,0.34)";
