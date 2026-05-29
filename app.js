@@ -662,8 +662,8 @@ function drawGrid(bounds) {
     ctx.fillStyle = ratio === 0 ? "rgba(255,207,90,0.9)" : "rgba(243,240,232,0.64)";
     const tickValue = inverseSymlog(sy);
     if (ratio === 0 && currentMetric === "pct") {
-      ctx.textAlign = "left";
-      ctx.fillText(formatAxisPct(tickValue), area.left + 8, y);
+      ctx.textAlign = "right";
+      ctx.fillText(formatAxisPct(tickValue), area.left - 6, y);
       ctx.textAlign = "start";
     } else {
       ctx.fillText(currentMetric === "pct" ? formatAxisPct(tickValue) : formatUsd(tickValue), 12, y);
