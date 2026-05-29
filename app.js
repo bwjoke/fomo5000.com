@@ -35,6 +35,7 @@ let currentTimelineIndex = 0;
 let stocks = [];
 let visibleStocks = [];
 let hoveredStock = null;
+let pinnedStock = null;
 let selectedStock = null;
 let query = "";
 let raf = 0;
@@ -51,6 +52,7 @@ const view = {
   offsetX: 0,
   offsetY: 0,
   dragging: false,
+  dragMoved: false,
   lastX: 0,
   lastY: 0,
 };
@@ -65,9 +67,9 @@ const searchPresetDefinitions = [
   { zh: { label: "WDC", value: "WDC" }, en: { label: "WDC", value: "WDC" } },
   { zh: { label: "SNDK", value: "SNDK" }, en: { label: "SNDK", value: "SNDK" } },
   { zh: { label: "MU", value: "MU" }, en: { label: "MU", value: "MU" } },
-  { zh: { label: "芯片", value: "芯片" }, en: { label: "Chips", value: "chips" } },
-  { zh: { label: "软件", value: "软件" }, en: { label: "Software", value: "software" } },
   { zh: { label: "通信", value: "通信" }, en: { label: "Telecom", value: "telecom" } },
+  { zh: { label: "软件", value: "软件" }, en: { label: "Software", value: "software" } },
+  { zh: { label: "芯片", value: "芯片" }, en: { label: "Chips", value: "chips" } },
 ];
 
 const copy = {
@@ -534,8 +536,8 @@ function cancelPositionAnimation() {
   positionAnimation = null;
 }
 
-function drawTriangle(stock, point, isHover, isMatch) {
-  const size = triangleSize(stock) * (isHover ? 1.45 : isMatch && query ? 1.9 : isMatch ? 1.25 : 1);
+function drawTriangle(stock, point, isHover, isMatch, isPinned = false) {
+  const size = triangleSize(stock) * (isPinned ? 2.05 : isHover ? 1.45 : isMatch && query ? 1.9 : isMatch ? 1.25 : 1);
   const angle = triangleAngle(stock);
   const points = trianglePath(point.x, point.y, size, angle);
   const minX = Math.min(points[0].x, points[1].x, points[2].x);
@@ -552,7 +554,7 @@ function drawTriangle(stock, point, isHover, isMatch) {
   ctx.clip();
 
   ctx.fillStyle = blendedStockColor(stock);
-  ctx.globalAlpha = isHover ? 0.98 : isMatch || !query ? 0.82 : 0.055;
+  ctx.globalAlpha = isPinned ? 1 : isHover ? 0.98 : isMatch || !query ? 0.82 : 0.055;
   ctx.fillRect(minX - 1, minY - 1, Math.max(1, maxX - minX) + 2, maxY - minY + 2);
   ctx.restore();
 
@@ -563,14 +565,14 @@ function drawTriangle(stock, point, isHover, isMatch) {
   ctx.lineTo(points[2].x, points[2].y);
   ctx.closePath();
   const strength = clamp(Math.abs(currentWeeklyChangePct(stock)) / 16, 0, 1);
-  ctx.lineWidth = isHover || isMatch ? 1.8 + strength * 1.4 : 0.65 + strength * 1.25;
+  ctx.lineWidth = isPinned ? 2.4 + strength * 1.7 : isHover || isMatch ? 1.8 + strength * 1.4 : 0.65 + strength * 1.25;
   ctx.strokeStyle = blendedStockColor(stock);
-  ctx.globalAlpha = isHover ? 1 : isMatch || !query ? 0.9 : 0.08;
+  ctx.globalAlpha = isPinned || isHover ? 1 : isMatch || !query ? 0.9 : 0.08;
   ctx.stroke();
-  if (isMatch && query) {
-    ctx.lineWidth = 4.2;
-    ctx.strokeStyle = "rgba(255,207,90,0.82)";
-    ctx.globalAlpha = 0.9;
+  if (isPinned || (isMatch && query)) {
+    ctx.lineWidth = isPinned ? 5.4 : 4.2;
+    ctx.strokeStyle = isPinned ? "rgba(255,207,90,0.96)" : "rgba(255,207,90,0.82)";
+    ctx.globalAlpha = isPinned ? 1 : 0.9;
     ctx.stroke();
   }
   ctx.restore();
@@ -786,7 +788,7 @@ function setLanguage(language, shouldPersist = true) {
   updateStaticLanguageText();
   renderLegend();
   drawNasdaqIndex();
-  if (selectedStock || hoveredStock) updateDetails(selectedStock || hoveredStock);
+  if (pinnedStock || selectedStock || hoveredStock) updateDetails(pinnedStock || selectedStock || hoveredStock);
   else updateDetails(null);
   scheduleDraw();
 }
@@ -807,6 +809,7 @@ function openPresetMenu() {
 
 function applySearchValue(value, shouldFocus = false) {
   cancelPositionAnimation();
+  pinnedStock = null;
   searchInput.value = value;
   query = value.trim().toLowerCase();
   hoveredStock = null;
@@ -884,6 +887,17 @@ function drawScene() {
       { x: hoveredStock.screenX, y: hoveredStock.screenY },
       true,
       matches.has(hoveredStock.id),
+      false,
+    );
+  }
+
+  if (pinnedStock && Number.isFinite(pinnedStock.screenX) && Number.isFinite(pinnedStock.screenY)) {
+    drawTriangle(
+      pinnedStock,
+      { x: pinnedStock.screenX, y: pinnedStock.screenY },
+      false,
+      matches.has(pinnedStock.id),
+      true,
     );
   }
 
@@ -1140,7 +1154,7 @@ function setPeriod(period) {
   currentPeriod = period;
   periodLabel.textContent = period;
   periodButtons.forEach((button) => button.classList.toggle("active", button.dataset.period === period));
-  if (selectedStock) updateDetails(selectedStock);
+  if (pinnedStock || selectedStock) updateDetails(pinnedStock || selectedStock);
   scheduleDraw();
 }
 
@@ -1149,7 +1163,7 @@ function setMetric(metric) {
   currentMetric = metric;
   metricButtons.forEach((button) => button.classList.toggle("active", button.dataset.metric === metric));
   if (axisModeLabel) axisModeLabel.textContent = metric === "pct" ? t("axisPct") : t("axisUsd");
-  if (selectedStock) updateDetails(selectedStock);
+  if (pinnedStock || selectedStock) updateDetails(pinnedStock || selectedStock);
   scheduleDraw();
 }
 
@@ -1167,7 +1181,7 @@ function setTimelineIndex(index) {
   updateBrandSubtitle();
   drawNasdaqIndex();
   renderLegend();
-  if (selectedStock) updateDetails(selectedStock);
+  if (pinnedStock || selectedStock) updateDetails(pinnedStock || selectedStock);
   scheduleDraw();
 }
 
@@ -1207,8 +1221,11 @@ canvas.addEventListener("mousemove", (event) => {
 
   if (view.dragging) {
     cancelPositionAnimation();
-    view.offsetX += x - view.lastX;
-    view.offsetY += y - view.lastY;
+    const dx = x - view.lastX;
+    const dy = y - view.lastY;
+    if (Math.abs(dx) + Math.abs(dy) > 2) view.dragMoved = true;
+    view.offsetX += dx;
+    view.offsetY += dy;
     view.lastX = x;
     view.lastY = y;
     scheduleDraw();
@@ -1218,7 +1235,7 @@ canvas.addEventListener("mousemove", (event) => {
   const next = nearestStock(x, y);
   if (next !== hoveredStock) {
     hoveredStock = next;
-    updateDetails(next);
+    if (!pinnedStock) updateDetails(next);
     scheduleDraw();
   }
   if (next) showTooltip(next, x, y);
@@ -1237,9 +1254,34 @@ canvas.addEventListener("mousedown", (event) => {
   cancelPositionAnimation();
   const rect = canvas.getBoundingClientRect();
   view.dragging = true;
+  view.dragMoved = false;
   view.lastX = event.clientX - rect.left;
   view.lastY = event.clientY - rect.top;
   canvas.classList.add("dragging");
+});
+
+canvas.addEventListener("click", (event) => {
+  if (view.dragMoved) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  const clicked = nearestStock(x, y);
+
+  if (!clicked || pinnedStock?.id === clicked.id) {
+    pinnedStock = null;
+    hoveredStock = null;
+    selectedStock = null;
+    hideTooltip();
+    updateDetails(null);
+    scheduleDraw();
+    return;
+  }
+
+  pinnedStock = clicked;
+  hoveredStock = clicked;
+  updateDetails(clicked);
+  showTooltip(clicked, x, y);
+  scheduleDraw();
 });
 
 window.addEventListener("mouseup", () => {
