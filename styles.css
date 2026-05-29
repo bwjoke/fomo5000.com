@@ -222,7 +222,8 @@ h1 {
 }
 
 .period-switch,
-.metric-switch {
+.metric-switch,
+.language-switch {
   display: grid;
   height: 38px;
   border: 1px solid var(--line);
@@ -237,8 +238,13 @@ h1 {
   grid-template-columns: repeat(2, 34px);
 }
 
+.language-switch {
+  grid-template-columns: repeat(2, 46px);
+}
+
 .period-switch button,
 .metric-switch button,
+.language-switch button,
 .icon-button {
   border: 0;
   background: transparent;
@@ -246,18 +252,22 @@ h1 {
 }
 
 .period-switch button,
-.metric-switch button {
+.metric-switch button,
+.language-switch button {
   color: var(--muted);
   border-right: 1px solid var(--line);
+  font-size: 12px;
 }
 
 .period-switch button:last-child,
-.metric-switch button:last-child {
+.metric-switch button:last-child,
+.language-switch button:last-child {
   border-right: 0;
 }
 
 .period-switch button.active,
-.metric-switch button.active {
+.metric-switch button.active,
+.language-switch button.active {
   color: #111;
   background: var(--accent);
 }
@@ -277,7 +287,8 @@ h1 {
 .preset-button:hover,
 .preset-menu button:hover,
 .period-switch button:hover,
-.metric-switch button:hover {
+.metric-switch button:hover,
+.language-switch button:hover {
   border-color: var(--line-strong);
   color: var(--text);
 }
@@ -653,6 +664,10 @@ h2 {
 
   .metric-switch {
     grid-template-columns: repeat(2, 42px);
+  }
+
+  .language-switch {
+    grid-template-columns: repeat(2, 54px);
   }
 
   .timeline-row {

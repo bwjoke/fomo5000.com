@@ -13,7 +13,9 @@ const presetSearchItems = Array.from(document.querySelectorAll("[data-search-pre
 const resetButton = document.getElementById("resetView");
 const periodButtons = Array.from(document.querySelectorAll("[data-period]"));
 const metricButtons = Array.from(document.querySelectorAll("[data-metric]"));
+const languageButtons = Array.from(document.querySelectorAll("[data-language]"));
 const brandSubtitle = document.querySelector(".brand p");
+const plotHint = document.getElementById("plotHint");
 const timelineSlider = document.getElementById("timelineSlider");
 const timelineDate = document.getElementById("timelineDate");
 const timelineStart = document.getElementById("timelineStart");
@@ -37,9 +39,11 @@ let query = "";
 let raf = 0;
 let marketMeta = null;
 let sectors = [];
+let sectorSources = new Map();
 let nasdaqIndex = null;
 let timelineDragging = false;
 let positionAnimation = null;
+let currentLanguage = "zh";
 
 const view = {
   scale: 1,
@@ -49,6 +53,151 @@ const view = {
   lastX: 0,
   lastY: 0,
 };
+
+const languageStorageKey = "fomo5000.language";
+const languageNames = {
+  zh: "中文",
+  en: "EN",
+};
+const searchPresetDefinitions = [
+  { zh: { label: "NVDA", value: "NVDA" }, en: { label: "NVDA", value: "NVDA" } },
+  { zh: { label: "WDC", value: "WDC" }, en: { label: "WDC", value: "WDC" } },
+  { zh: { label: "SNDK", value: "SNDK" }, en: { label: "SNDK", value: "SNDK" } },
+  { zh: { label: "MU", value: "MU" }, en: { label: "MU", value: "MU" } },
+  { zh: { label: "芯片", value: "芯片" }, en: { label: "Chips", value: "chips" } },
+  { zh: { label: "软件", value: "软件" }, en: { label: "Software", value: "software" } },
+  { zh: { label: "通信", value: "通信" }, en: { label: "Telecom", value: "telecom" } },
+];
+
+const copy = {
+  zh: {
+    title: "AI Market Map",
+    appAria: "AI 美股二维地图",
+    controlsAria: "视图控制",
+    realMarketData: "真实市场数据",
+    searchLabel: "搜索",
+    searchPlaceholder: "NVDA / 半导体 / 科技",
+    clearSearch: "清除搜索",
+    presetSearch: "常用",
+    periodAria: "市值增幅周期",
+    metricAria: "纵轴单位",
+    languageAria: "语言 / Language",
+    resetView: "重置视图",
+    canvasAria: "AI 相关度与市值增幅散点图",
+    plotHint: "滚轮缩放，拖动画布平移",
+    timelineAria: "周度时间进度条",
+    timelineLabel: "周度时间",
+    nasdaqAria: "纳斯达克指数曲线",
+    sideAria: "股票详情与行业图例",
+    currentView: "当前视图",
+    aiRelevance: "AI 相关度",
+    aiBasisShort: "官方行业先验 + 简介微调",
+    triangleDirection: "三角方向",
+    weeklyMove: "当周涨跌",
+    triangleArea: "三角面积",
+    currentMarketCap: "当前市值",
+    verticalScale: "纵轴尺度",
+    axisPct: "市值涨跌幅 %",
+    axisUsd: "市值 USD 增幅",
+    hoverTitle: "悬浮查看",
+    sectorColors: "行业颜色",
+    emptyDetails: "把鼠标移到任意三角形上，查看 ticker、公司名、官方行业、AI 基准、简介微调、市值增幅和当周涨跌。",
+    loadingCount: "加载真实数据...",
+    loadingStatus: "加载真实市场数据...",
+    loadFailed: ({ message }) => `真实数据加载失败：${message}`,
+    stockCount: ({ visible, total }) => `${visible} / ${total} symbols`,
+    brandLoaded: ({ total, date }) => `${total} 只真实股票 · 周度 ${date}`,
+    xAxis: "AI 相关度",
+    yAxisPct: ({ date, period }) => `${date} · ${period} 市值涨跌幅 %`,
+    yAxisUsd: ({ date, period }) => `${date} · ${period} 市值 USD 增幅`,
+    aiBasis: ({ base, adjustment }) => `官方 ${base} / 简介 ${adjustment}`,
+    marketCapThisWeek: "当周市值",
+    growthUsd: ({ period }) => `${period} 市值增幅`,
+    growthPct: ({ period }) => `${period} 市值涨跌幅`,
+    industry: "行业",
+    closeThisWeek: "当周收盘",
+    growthShort: ({ period }) => `${period} 增幅`,
+    weeklyDate: "周度日期",
+  },
+  en: {
+    title: "AI Market Map",
+    appAria: "AI U.S. stock market map",
+    controlsAria: "View controls",
+    realMarketData: "Real market data",
+    searchLabel: "Search",
+    searchPlaceholder: "NVDA / chips / software",
+    clearSearch: "Clear search",
+    presetSearch: "Popular",
+    periodAria: "Market-cap change period",
+    metricAria: "Y-axis unit",
+    languageAria: "Language",
+    resetView: "Reset view",
+    canvasAria: "AI relevance and market-cap change scatter map",
+    plotHint: "Scroll to zoom, drag to pan",
+    timelineAria: "Weekly timeline",
+    timelineLabel: "Week",
+    nasdaqAria: "Nasdaq index line",
+    sideAria: "Stock details and sector legend",
+    currentView: "Current View",
+    aiRelevance: "AI Relevance",
+    aiBasisShort: "Official sector prior + profile adjustment",
+    triangleDirection: "Triangle Direction",
+    weeklyMove: "Weekly Move",
+    triangleArea: "Triangle Area",
+    currentMarketCap: "Current Market Cap",
+    verticalScale: "Y-axis Scale",
+    axisPct: "Market-cap change %",
+    axisUsd: "Market-cap USD change",
+    hoverTitle: "Hover Details",
+    sectorColors: "Sector Colors",
+    emptyDetails: "Move the pointer over any triangle to inspect ticker, company, official sector, AI baseline, profile adjustment, market-cap change, and weekly move.",
+    loadingCount: "Loading real data...",
+    loadingStatus: "Loading real market data...",
+    loadFailed: ({ message }) => `Failed to load real data: ${message}`,
+    stockCount: ({ visible, total }) => `${visible} / ${total} symbols`,
+    brandLoaded: ({ total, date }) => `${total} real stocks · week ${date}`,
+    xAxis: "AI Relevance",
+    yAxisPct: ({ date, period }) => `${date} · ${period} market-cap change %`,
+    yAxisUsd: ({ date, period }) => `${date} · ${period} market-cap USD change`,
+    aiBasis: ({ base, adjustment }) => `Official ${base} / Profile ${adjustment}`,
+    marketCapThisWeek: "Weekly Market Cap",
+    growthUsd: ({ period }) => `${period} Market-cap Change`,
+    growthPct: ({ period }) => `${period} Market-cap Change %`,
+    industry: "Industry",
+    closeThisWeek: "Weekly Close",
+    growthShort: ({ period }) => `${period} Change`,
+    weeklyDate: "Week Date",
+  },
+};
+
+function initialLanguage() {
+  let stored = null;
+  try {
+    stored = localStorage.getItem(languageStorageKey);
+  } catch {
+    stored = null;
+  }
+  if (stored === "zh" || stored === "en") return stored;
+  const languages = navigator.languages?.length ? navigator.languages : [navigator.language];
+  return languages.some((language) => String(language || "").toLowerCase().startsWith("zh")) ? "zh" : "en";
+}
+
+function t(key, params = {}) {
+  const value = copy[currentLanguage]?.[key] ?? copy.en[key] ?? key;
+  return typeof value === "function" ? value(params) : value;
+}
+
+function formatAdjustment(value) {
+  if (!Number.isFinite(value)) return "N/A";
+  return `${value >= 0 ? "+" : ""}${value.toFixed(1)}`;
+}
+
+function displaySectorName(name) {
+  if (currentLanguage === "zh") return name;
+  return sectorSources.get(name) || name;
+}
+
+currentLanguage = initialLanguage();
 
 const featuredTickers = new Set([
   "NVDA",
@@ -75,29 +224,31 @@ const featuredTickers = new Set([
 ]);
 
 const industrySearchRules = [
-  { pattern: /semiconductor|electronic components/i, aliases: ["半导体", "芯片", "电子元件"] },
-  { pattern: /computer software|programming data processing/i, aliases: ["软件", "数据处理", "编程"] },
-  { pattern: /edp services|computer processing|information technology/i, aliases: ["数据服务", "信息服务", "IT服务"] },
-  { pattern: /computer manufacturing|computer peripheral|consumer electronics/i, aliases: ["硬件", "计算机", "消费电子"] },
-  { pattern: /telecommunications|communications equipment|broadcasting|pay television/i, aliases: ["通信", "通信设备", "广播电视"] },
-  { pattern: /biotechnology|pharmaceutical|medicinal chemicals|diagnostic/i, aliases: ["生物科技", "制药", "医药", "诊断"] },
-  { pattern: /medical|dental|nursing|health/i, aliases: ["医疗", "医疗器械", "医疗服务"] },
-  { pattern: /bank|investment|finance|insurer|trust|asset management/i, aliases: ["金融", "银行", "保险", "投资"] },
-  { pattern: /real estate|reit|homebuilding/i, aliases: ["房地产", "REIT", "房屋建筑"] },
-  { pattern: /oil|gas|energy|power generation|electric utilities/i, aliases: ["能源", "油气", "电力", "公用事业"] },
-  { pattern: /mining|steel|metal|precious metals|chemicals|minerals/i, aliases: ["材料", "矿业", "金属", "化工"] },
-  { pattern: /industrial|machinery|aerospace|defense|military|construction|engineering/i, aliases: ["工业", "机械", "航空航天", "国防", "工程"] },
-  { pattern: /restaurant|food|beverage|apparel|retail|stores|hotel|resort|auto dealer|recreation|toy/i, aliases: ["消费", "零售", "餐饮", "酒店", "服装", "食品"] },
-  { pattern: /auto manufacturing|auto parts|motor vehicles/i, aliases: ["汽车", "整车", "汽车零部件"] },
-  { pattern: /transportation|marine|air freight|trucking|courier/i, aliases: ["运输", "物流", "航运", "空运"] },
-  { pattern: /advertising|business services|professional services|commercial services/i, aliases: ["商业服务", "专业服务", "广告"] },
+  { pattern: /semiconductor|electronic components/i, aliases: { zh: ["半导体", "芯片", "电子元件"], en: ["semiconductor", "chips", "electronic components"] } },
+  { pattern: /computer software|programming data processing/i, aliases: { zh: ["软件", "数据处理", "编程"], en: ["software", "data processing", "programming"] } },
+  { pattern: /edp services|computer processing|information technology/i, aliases: { zh: ["数据服务", "信息服务", "IT服务"], en: ["data services", "information technology", "it services"] } },
+  { pattern: /computer manufacturing|computer peripheral|consumer electronics/i, aliases: { zh: ["硬件", "计算机", "消费电子"], en: ["hardware", "computer", "consumer electronics"] } },
+  { pattern: /telecommunications|communications equipment|broadcasting|pay television/i, aliases: { zh: ["通信", "通信设备", "广播电视"], en: ["telecom", "telecommunications", "communications equipment"] } },
+  { pattern: /biotechnology|pharmaceutical|medicinal chemicals|diagnostic/i, aliases: { zh: ["生物科技", "制药", "医药", "诊断"], en: ["biotech", "pharma", "diagnostics"] } },
+  { pattern: /medical|dental|nursing|health/i, aliases: { zh: ["医疗", "医疗器械", "医疗服务"], en: ["health care", "medical", "medical devices"] } },
+  { pattern: /bank|investment|finance|insurer|trust|asset management/i, aliases: { zh: ["金融", "银行", "保险", "投资"], en: ["finance", "banking", "insurance", "investment"] } },
+  { pattern: /real estate|reit|homebuilding/i, aliases: { zh: ["房地产", "REIT", "房屋建筑"], en: ["real estate", "reit", "homebuilding"] } },
+  { pattern: /oil|gas|energy|power generation|electric utilities/i, aliases: { zh: ["能源", "油气", "电力", "公用事业"], en: ["energy", "oil", "gas", "utilities"] } },
+  { pattern: /mining|steel|metal|precious metals|chemicals|minerals/i, aliases: { zh: ["材料", "矿业", "金属", "化工"], en: ["materials", "mining", "metals", "chemicals"] } },
+  { pattern: /industrial|machinery|aerospace|defense|military|construction|engineering/i, aliases: { zh: ["工业", "机械", "航空航天", "国防", "工程"], en: ["industrial", "machinery", "aerospace", "defense", "engineering"] } },
+  { pattern: /restaurant|food|beverage|apparel|retail|stores|hotel|resort|auto dealer|recreation|toy/i, aliases: { zh: ["消费", "零售", "餐饮", "酒店", "服装", "食品"], en: ["consumer", "retail", "restaurant", "hotel", "apparel", "food"] } },
+  { pattern: /auto manufacturing|auto parts|motor vehicles/i, aliases: { zh: ["汽车", "整车", "汽车零部件"], en: ["auto", "automotive", "vehicles"] } },
+  { pattern: /transportation|marine|air freight|trucking|courier/i, aliases: { zh: ["运输", "物流", "航运", "空运"], en: ["transportation", "logistics", "shipping", "air freight"] } },
+  { pattern: /advertising|business services|professional services|commercial services/i, aliases: { zh: ["商业服务", "专业服务", "广告"], en: ["business services", "professional services", "advertising"] } },
 ];
 
 function industrySearchAliases(industry) {
   const text = String(industry || "");
   const aliases = new Set();
   industrySearchRules.forEach((rule) => {
-    if (rule.pattern.test(text)) rule.aliases.forEach((alias) => aliases.add(alias));
+    if (rule.pattern.test(text)) {
+      Object.values(rule.aliases).flat().forEach((alias) => aliases.add(alias));
+    }
   });
   return [...aliases];
 }
@@ -190,6 +341,7 @@ function blendedStockColor(stock) {
 
 function buildSectors(items, suppliedSectors = []) {
   const colors = new Map(suppliedSectors.map((sector) => [sector.name, sector.color]));
+  sectorSources = new Map(suppliedSectors.map((sector) => [sector.name, sector.source || sector.name]));
   const counts = new Map();
   items.forEach((stock) => {
     stock.sectors.forEach((sector) => counts.set(sector.name, (counts.get(sector.name) || 0) + 1));
@@ -229,10 +381,8 @@ function formatReturnPct(value) {
 
 function formatAiBasis(stock) {
   const base = Number.isFinite(stock.aiScoreOfficialBase) ? `${stock.aiScoreOfficialBase.toFixed(1)}%` : "N/A";
-  const adjustment = Number.isFinite(stock.aiScoreProfileAdjustment)
-    ? `${stock.aiScoreProfileAdjustment >= 0 ? "+" : ""}${stock.aiScoreProfileAdjustment.toFixed(1)}`
-    : "N/A";
-  return `官方 ${base} / 简介 ${adjustment}`;
+  const adjustment = formatAdjustment(stock.aiScoreProfileAdjustment);
+  return t("aiBasis", { base, adjustment });
 }
 
 function symlog(value) {
@@ -516,12 +666,18 @@ function drawGrid(bounds) {
 
   ctx.fillStyle = "rgba(243,240,232,0.78)";
   ctx.textAlign = "center";
-  ctx.fillText("AI 相关度", area.left + area.width / 2, area.bottom + 44);
+  ctx.fillText(t("xAxis"), area.left + area.width / 2, area.bottom + 44);
 
   ctx.save();
   ctx.translate(18, area.top + area.height / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.fillText(`${timeline[currentTimelineIndex] || ""} · ${currentPeriod} ${currentMetric === "pct" ? "市值涨跌幅 %" : "市值 USD 增幅"}`, 0, 0);
+  ctx.fillText(
+    currentMetric === "pct"
+      ? t("yAxisPct", { date: timeline[currentTimelineIndex] || "", period: currentPeriod })
+      : t("yAxisUsd", { date: timeline[currentTimelineIndex] || "", period: currentPeriod }),
+    0,
+    0,
+  );
   ctx.restore();
 
   ctx.restore();
@@ -530,16 +686,108 @@ function drawGrid(bounds) {
 function stockMatches(stock) {
   if (!query) return true;
   if (String(stock.ticker || "").toLowerCase() === query) return true;
-  const chineseSearchable = [
+  if (query.length < 3 && !/[\u4e00-\u9fff]/.test(query)) return false;
+  const searchable = [
     stock.officialSectorName,
+    displaySectorName(stock.officialSectorName),
     ...industrySearchAliases(stock.industry),
     ...stock.sectors.map((sector) => sector.name),
+    ...stock.sectors.map((sector) => displaySectorName(sector.name)),
   ].join(" ");
-  return chineseSearchable.toLowerCase().includes(query);
+  return searchable.toLowerCase().includes(query);
 }
 
 function updateClearSearchButton() {
   if (clearSearchButton) clearSearchButton.hidden = !searchInput.value;
+}
+
+function setElementText(selector, text) {
+  const element = document.querySelector(selector);
+  if (element) element.textContent = text;
+}
+
+function setElementAttr(selector, attr, value) {
+  const element = document.querySelector(selector);
+  if (element) element.setAttribute(attr, value);
+}
+
+function updateBrandSubtitle() {
+  if (!brandSubtitle) return;
+  if (!stocks.length) {
+    brandSubtitle.textContent = t("realMarketData");
+    return;
+  }
+  brandSubtitle.textContent = t("brandLoaded", {
+    total: stocks.length.toLocaleString(),
+    date: timeline[currentTimelineIndex] || "--",
+  });
+}
+
+function updateStaticLanguageText() {
+  document.documentElement.lang = currentLanguage === "zh" ? "zh-CN" : "en";
+  document.title = t("title");
+  setElementAttr(".workspace", "aria-label", t("appAria"));
+  setElementAttr(".controls", "aria-label", t("controlsAria"));
+  setElementAttr(".period-switch", "aria-label", t("periodAria"));
+  setElementAttr(".metric-switch", "aria-label", t("metricAria"));
+  setElementAttr(".language-switch", "aria-label", t("languageAria"));
+  setElementAttr("#resetView", "aria-label", t("resetView"));
+  setElementAttr("#resetView", "title", t("resetView"));
+  setElementAttr("#marketCanvas", "aria-label", t("canvasAria"));
+  setElementAttr(".timeline-row", "aria-label", t("timelineAria"));
+  setElementAttr(".index-strip", "aria-label", t("nasdaqAria"));
+  setElementAttr(".side-panel", "aria-label", t("sideAria"));
+
+  setElementText(".search-box label", t("searchLabel"));
+  if (searchInput) searchInput.placeholder = t("searchPlaceholder");
+  if (clearSearchButton) {
+    clearSearchButton.setAttribute("aria-label", t("clearSearch"));
+    clearSearchButton.setAttribute("title", t("clearSearch"));
+  }
+  if (presetSearchButton) presetSearchButton.textContent = t("presetSearch");
+  presetSearchItems.forEach((button, index) => {
+    const preset = searchPresetDefinitions[index]?.[currentLanguage];
+    if (!preset) return;
+    button.textContent = preset.label;
+    button.dataset.searchPreset = preset.value;
+  });
+
+  if (plotHint) plotHint.textContent = t("plotHint");
+  setElementText(".timeline-datebox span", t("timelineLabel"));
+  setElementText(".metric-title span", t("currentView"));
+  setElementText(".metric-grid div:nth-child(1) span", t("aiRelevance"));
+  setElementText(".metric-grid div:nth-child(1) strong", t("aiBasisShort"));
+  setElementText(".metric-grid div:nth-child(2) span", t("triangleDirection"));
+  setElementText(".metric-grid div:nth-child(2) strong", t("weeklyMove"));
+  setElementText(".metric-grid div:nth-child(3) span", t("triangleArea"));
+  setElementText(".metric-grid div:nth-child(3) strong", t("currentMarketCap"));
+  setElementText(".metric-grid div:nth-child(4) span", t("verticalScale"));
+  setElementText(".details-panel h2", t("hoverTitle"));
+  setElementText(".legend-panel h2", t("sectorColors"));
+  languageButtons.forEach((button) => {
+    const isActive = button.dataset.language === currentLanguage;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+    button.textContent = languageNames[button.dataset.language] || button.dataset.language;
+  });
+  updateBrandSubtitle();
+  if (axisModeLabel) axisModeLabel.textContent = currentMetric === "pct" ? t("axisPct") : t("axisUsd");
+}
+
+function setLanguage(language, shouldPersist = true) {
+  if (language !== "zh" && language !== "en") return;
+  currentLanguage = language;
+  if (shouldPersist) {
+    try {
+      localStorage.setItem(languageStorageKey, language);
+    } catch {}
+  }
+  updateStaticLanguageText();
+  renderLegend();
+  drawNasdaqIndex();
+  if (selectedStock || hoveredStock) updateDetails(selectedStock || hoveredStock);
+  else updateDetails(null);
+  scheduleDraw();
 }
 
 function closePresetMenu() {
@@ -637,7 +885,10 @@ function drawScene() {
     );
   }
 
-  countLabel.textContent = `${visibleStocks.length.toLocaleString()} / ${stocks.length.toLocaleString()} symbols`;
+  countLabel.textContent = t("stockCount", {
+    visible: visibleStocks.length.toLocaleString(),
+    total: stocks.length.toLocaleString(),
+  });
 
   if (positionAnimation && animationProgress < 1) {
     scheduleDraw();
@@ -778,7 +1029,7 @@ function sectorMixHtml(stock) {
       (sector) => `
         <div class="mix-row">
           <span class="swatch" style="background:${colorForSector(sector.name)}"></span>
-          <span>${sector.name}</span>
+          <span>${displaySectorName(sector.name)}</span>
           <span>${Math.round(sector.weight * 100)}%</span>
         </div>
       `,
@@ -790,7 +1041,7 @@ function updateDetails(stock) {
   selectedStock = stock;
   if (!stock) {
     details.className = "stock-details empty";
-    details.innerHTML = "<p>把鼠标移到任意三角形上，查看 ticker、公司名、官方行业、AI 基准、简介微调、市值增幅和当周涨跌。</p>";
+    details.innerHTML = `<p>${t("emptyDetails")}</p>`;
     return;
   }
   const growth = stock.growthSeries?.[currentPeriod]?.[currentTimelineIndex];
@@ -807,14 +1058,14 @@ function updateDetails(stock) {
         <span class="pill">${stock.exchange}</span>
       </div>
       <div class="detail-grid">
-        <div><span class="label">AI 相关度</span><strong>${stock.aiScore.toFixed(1)}%</strong></div>
-        <div><span class="label">AI 计算</span><strong>${formatAiBasis(stock)}</strong></div>
-        <div><span class="label">当周市值</span><strong>${formatUsd(currentMarketCap(stock))}</strong></div>
-        <div><span class="label">${currentPeriod} 市值增幅</span><strong class="${growth >= 0 ? "positive" : "negative"}">${formatUsd(growth)}</strong></div>
-        <div><span class="label">${currentPeriod} 市值涨跌幅</span><strong class="${returnPct >= 0 ? "positive" : "negative"}">${formatReturnPct(returnPct)}</strong></div>
-        <div><span class="label">当周涨跌</span><strong class="${weeklyChange >= 0 ? "positive" : "negative"}">${formatPct(weeklyChange)}</strong></div>
-        <div><span class="label">行业</span><strong>${stock.industry || stock.sector || "N/A"}</strong></div>
-        <div><span class="label">当周收盘</span><strong>${formatPrice(currentClose(stock))}</strong></div>
+        <div><span class="label">${t("aiRelevance")}</span><strong>${stock.aiScore.toFixed(1)}%</strong></div>
+        <div><span class="label">${currentLanguage === "zh" ? "AI 计算" : "AI Basis"}</span><strong>${formatAiBasis(stock)}</strong></div>
+        <div><span class="label">${t("marketCapThisWeek")}</span><strong>${formatUsd(currentMarketCap(stock))}</strong></div>
+        <div><span class="label">${t("growthUsd", { period: currentPeriod })}</span><strong class="${growth >= 0 ? "positive" : "negative"}">${formatUsd(growth)}</strong></div>
+        <div><span class="label">${t("growthPct", { period: currentPeriod })}</span><strong class="${returnPct >= 0 ? "positive" : "negative"}">${formatReturnPct(returnPct)}</strong></div>
+        <div><span class="label">${t("weeklyMove")}</span><strong class="${weeklyChange >= 0 ? "positive" : "negative"}">${formatPct(weeklyChange)}</strong></div>
+        <div><span class="label">${t("industry")}</span><strong>${stock.industry || displaySectorName(stock.officialSectorName || stock.sector) || "N/A"}</strong></div>
+        <div><span class="label">${t("closeThisWeek")}</span><strong>${formatPrice(currentClose(stock))}</strong></div>
       </div>
       <div class="sector-mix">${sectorMixHtml(stock)}</div>
     </div>
@@ -829,14 +1080,14 @@ function showTooltip(stock, x, y) {
   tooltip.innerHTML = `
     <strong>${stock.ticker} <span class="muted">${stock.name}</span></strong>
     <dl>
-      <dt>AI 相关度</dt><dd>${stock.aiScore.toFixed(1)}%</dd>
-      <dt>AI 计算</dt><dd>${formatAiBasis(stock)}</dd>
-      <dt>${currentPeriod} 增幅</dt><dd class="${growth >= 0 ? "positive" : "negative"}">${formatUsd(growth)}</dd>
-      <dt>${currentPeriod} 涨跌幅</dt><dd class="${returnPct >= 0 ? "positive" : "negative"}">${formatReturnPct(returnPct)}</dd>
-      <dt>当周涨跌</dt><dd class="${weeklyChange >= 0 ? "positive" : "negative"}">${formatPct(weeklyChange)}</dd>
-      <dt>当周市值</dt><dd>${formatUsd(currentMarketCap(stock))}</dd>
-      <dt>行业</dt><dd>${stock.industry || stock.sector || stock.sectors.map((sector) => sector.name).join(" / ")}</dd>
-      <dt>周度日期</dt><dd>${timeline[currentTimelineIndex] || "N/A"}</dd>
+      <dt>${t("aiRelevance")}</dt><dd>${stock.aiScore.toFixed(1)}%</dd>
+      <dt>${currentLanguage === "zh" ? "AI 计算" : "AI Basis"}</dt><dd>${formatAiBasis(stock)}</dd>
+      <dt>${t("growthShort", { period: currentPeriod })}</dt><dd class="${growth >= 0 ? "positive" : "negative"}">${formatUsd(growth)}</dd>
+      <dt>${t("growthPct", { period: currentPeriod })}</dt><dd class="${returnPct >= 0 ? "positive" : "negative"}">${formatReturnPct(returnPct)}</dd>
+      <dt>${t("weeklyMove")}</dt><dd class="${weeklyChange >= 0 ? "positive" : "negative"}">${formatPct(weeklyChange)}</dd>
+      <dt>${t("marketCapThisWeek")}</dt><dd>${formatUsd(currentMarketCap(stock))}</dd>
+      <dt>${t("industry")}</dt><dd>${stock.industry || stock.sectors.map((sector) => displaySectorName(sector.name)).join(" / ")}</dd>
+      <dt>${t("weeklyDate")}</dt><dd>${timeline[currentTimelineIndex] || "N/A"}</dd>
     </dl>
   `;
   const rect = canvas.getBoundingClientRect();
@@ -874,7 +1125,7 @@ function renderLegend() {
       (sector) => `
         <div class="legend-item">
           <span class="swatch" style="background:${sector.color}"></span>
-          <span>${sector.name}</span>
+          <span>${displaySectorName(sector.name)}</span>
           <strong>${sector.count.toLocaleString()} / ${formatUsd(sector.marketCapTotal)}</strong>
         </div>
       `,
@@ -895,7 +1146,7 @@ function setMetric(metric) {
   cancelPositionAnimation();
   currentMetric = metric;
   metricButtons.forEach((button) => button.classList.toggle("active", button.dataset.metric === metric));
-  if (axisModeLabel) axisModeLabel.textContent = metric === "pct" ? "市值涨跌幅 %" : "市值 USD 增幅";
+  if (axisModeLabel) axisModeLabel.textContent = metric === "pct" ? t("axisPct") : t("axisUsd");
   if (selectedStock) updateDetails(selectedStock);
   scheduleDraw();
 }
@@ -911,9 +1162,7 @@ function setTimelineIndex(index) {
   currentTimelineIndex = nextIndex;
   if (timelineSlider) timelineSlider.value = String(currentTimelineIndex);
   if (timelineDate) timelineDate.textContent = timeline[currentTimelineIndex] || "--";
-  if (brandSubtitle && stocks.length) {
-    brandSubtitle.textContent = `${stocks.length.toLocaleString()} 只真实股票 · 周度 ${timeline[currentTimelineIndex] || "--"}`;
-  }
+  updateBrandSubtitle();
   drawNasdaqIndex();
   renderLegend();
   if (selectedStock) updateDetails(selectedStock);
@@ -1022,6 +1271,10 @@ metricButtons.forEach((button) => {
   button.addEventListener("click", () => setMetric(button.dataset.metric));
 });
 
+languageButtons.forEach((button) => {
+  button.addEventListener("click", () => setLanguage(button.dataset.language));
+});
+
 timelineSlider?.addEventListener("input", (event) => {
   setTimelineIndex(Number(event.target.value));
 });
@@ -1075,6 +1328,9 @@ window.addEventListener("resize", () => {
   drawNasdaqIndex();
 });
 
+updateStaticLanguageText();
+updateDetails(null);
+
 async function fetchJson(path) {
   const response = await fetch(path, { cache: "no-store" });
   if (!response.ok) throw new Error(`Unable to load ${path}: ${response.status}`);
@@ -1101,8 +1357,8 @@ async function loadMarketPayload() {
 }
 
 async function loadMarketData() {
-  countLabel.textContent = "加载真实数据...";
-  drawStatus("加载真实市场数据...");
+  countLabel.textContent = t("loadingCount");
+  drawStatus(t("loadingStatus"));
   const payload = await loadMarketPayload();
   marketMeta = payload.meta || null;
   nasdaqIndex = payload.indices?.nasdaqComposite || null;
@@ -1124,10 +1380,7 @@ async function loadMarketData() {
   buildSectors(stocks, payload.sectors || []);
   updateTimelineControls();
   setMetric(currentMetric);
-  const latestDate = timeline[currentTimelineIndex] || stocks.reduce((latest, stock) => (stock.latestDate > latest ? stock.latestDate : latest), "");
-  if (brandSubtitle) {
-    brandSubtitle.textContent = `${stocks.length.toLocaleString()} 只真实股票 · 周度 ${latestDate}`;
-  }
+  updateBrandSubtitle();
   renderLegend();
   updateClearSearchButton();
   if (searchInput.value.trim()) {
@@ -1141,6 +1394,6 @@ async function loadMarketData() {
 loadMarketData().catch((error) => {
   console.error(error);
   const message = error?.message || String(error);
-  countLabel.textContent = `真实数据加载失败：${message}`;
-  drawStatus(`真实数据加载失败：${message}`);
+  countLabel.textContent = t("loadFailed", { message });
+  drawStatus(t("loadFailed", { message }));
 });

@@ -59,6 +59,11 @@
               <button class="active" data-metric="pct" type="button">%</button>
             </div>
 
+            <div class="language-switch" role="group" aria-label="语言 / Language">
+              <button class="active" data-language="zh" type="button">中文</button>
+              <button data-language="en" type="button">EN</button>
+            </div>
+
             <button id="resetView" class="icon-button" type="button" aria-label="重置视图" title="重置视图">
               <span aria-hidden="true">⌖</span>
             </button>
@@ -70,7 +75,7 @@
           <div id="tooltip" class="tooltip" hidden></div>
           <div class="plot-caption">
             <span id="countLabel">5,200 symbols</span>
-            <span>滚轮缩放，拖动画布平移</span>
+            <span id="plotHint">滚轮缩放，拖动画布平移</span>
           </div>
         </div>
 
