@@ -6,6 +6,7 @@ const legendEl = document.getElementById("legend");
 const periodLabel = document.getElementById("periodLabel");
 const countLabel = document.getElementById("countLabel");
 const searchInput = document.getElementById("searchInput");
+const searchBox = document.querySelector(".search-box");
 const clearSearchButton = document.getElementById("clearSearch");
 const presetSearchButton = document.getElementById("presetSearch");
 const presetSearchMenu = document.getElementById("presetSearchMenu");
@@ -791,16 +792,17 @@ function setLanguage(language, shouldPersist = true) {
 }
 
 function closePresetMenu() {
-  if (!presetSearchMenu || !presetSearchButton) return;
+  if (!presetSearchMenu) return;
   presetSearchMenu.hidden = true;
-  presetSearchButton.setAttribute("aria-expanded", "false");
+  searchBox?.setAttribute("aria-expanded", "false");
+  presetSearchButton?.setAttribute("aria-expanded", "false");
 }
 
-function togglePresetMenu() {
-  if (!presetSearchMenu || !presetSearchButton) return;
-  const willOpen = presetSearchMenu.hidden;
-  presetSearchMenu.hidden = !willOpen;
-  presetSearchButton.setAttribute("aria-expanded", String(willOpen));
+function openPresetMenu() {
+  if (!presetSearchMenu) return;
+  presetSearchMenu.hidden = false;
+  searchBox?.setAttribute("aria-expanded", "true");
+  presetSearchButton?.setAttribute("aria-expanded", "true");
 }
 
 function applySearchValue(value, shouldFocus = false) {
@@ -1297,14 +1299,18 @@ searchInput.addEventListener("input", (event) => {
   applySearchValue(event.target.value);
 });
 
+searchInput.addEventListener("focus", openPresetMenu);
+searchBox?.addEventListener("click", openPresetMenu);
+
 clearSearchButton?.addEventListener("click", () => {
   applySearchValue("", true);
-  closePresetMenu();
+  openPresetMenu();
 });
 
 presetSearchButton?.addEventListener("click", (event) => {
   event.stopPropagation();
-  togglePresetMenu();
+  if (presetSearchMenu?.hidden) openPresetMenu();
+  else closePresetMenu();
 });
 
 presetSearchItems.forEach((button) => {

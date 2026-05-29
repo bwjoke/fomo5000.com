@@ -68,9 +68,9 @@ button {
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 16px;
+  justify-content: flex-start;
+  gap: 18px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--line);
   background: rgba(24, 27, 27, 0.88);
 }
@@ -78,13 +78,18 @@ button {
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-width: 260px;
+  gap: 10px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.brand > div {
+  min-width: 0;
 }
 
 .mark {
-  width: 34px;
-  height: 34px;
+  width: 31px;
+  height: 31px;
   display: inline-block;
   border: 2px solid #f3f0e8;
   background:
@@ -107,6 +112,10 @@ h1 {
 
 .brand p {
   margin-top: 4px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--muted);
   font-size: 12px;
 }
@@ -114,18 +123,18 @@ h1 {
 .controls {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
+  justify-content: flex-start;
+  gap: 8px;
+  flex: 1 1 auto;
   min-width: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .search-control {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: min(360px, 34vw);
+  flex: 1 1 320px;
+  min-width: 230px;
+  max-width: 390px;
 }
 
 .search-box {
@@ -155,6 +164,11 @@ h1 {
   background: transparent;
 }
 
+.search-box:focus-within,
+.search-box[aria-expanded="true"] {
+  border-color: var(--line-strong);
+}
+
 .search-box input::-webkit-search-cancel-button {
   appearance: none;
 }
@@ -180,21 +194,6 @@ h1 {
 .search-clear[hidden],
 .preset-menu[hidden] {
   display: none;
-}
-
-.preset-button {
-  height: 38px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  background: #0d0f0f;
-  color: var(--muted);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.preset-button[aria-expanded="true"] {
-  border-color: var(--line-strong);
-  color: var(--text);
 }
 
 .preset-menu {
@@ -273,7 +272,7 @@ h1 {
 }
 
 .icon-button {
-  width: 38px;
+  width: 36px;
   height: 38px;
   border: 1px solid var(--line);
   background: #0d0f0f;
@@ -651,6 +650,7 @@ h2 {
 
   .search-control {
     min-width: 100%;
+    max-width: none;
   }
 
   .preset-menu {
