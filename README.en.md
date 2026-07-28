@@ -16,7 +16,7 @@ Live site: https://fomo5000.com
 
 ## Data Notes
 
-The checked-in market dataset is a generated snapshot from Nasdaq screener and historical quote endpoints. The current snapshot contains 5,292 usable symbols and is latest through 2026-05-26.
+The checked-in market dataset is a generated snapshot from Nasdaq screener and historical quote endpoints. The current snapshot contains 5,290 usable symbols and is latest through 2026-07-27.
 
 Market-cap changes are estimates: current screener market cap is combined with historical close-price returns, holding share count constant. AI relevance is an experimental ranking signal, not a recommendation.
 
